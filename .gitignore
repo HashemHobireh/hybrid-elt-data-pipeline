@@ -1,0 +1,11 @@
+__pycache__/
+.pytest_cache/
+*.py[cod]
+.env
+.DS_Store
+reports/screenshots/*.png
+reports/screenshots/*.jpg
+# لا ترفع ملف الدكتور الضخم إلى GitHub
+data/orders_huge_mixed_quality.csv
+
+.ipynb_checkpoints/
