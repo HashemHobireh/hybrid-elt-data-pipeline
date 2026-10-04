@@ -19,7 +19,8 @@ def run_pipeline(input_path: Path | None, batch_size: int | None = None,
                  classify_run_id: str | None = None,
                  progress_every_batches: int = 20,
                  start_row: int | None = None,
-                 end_row: int | None = None) -> dict:
+                 end_row: int | None = None,
+                 seen_order_ids: set | None = None) -> dict:
     """تشغيل Pipeline كامل أو تصنيف تشغيل Raw موجود مسبقًا."""
     from elt_pipeline import run_full_classification
 
@@ -46,6 +47,7 @@ def run_pipeline(input_path: Path | None, batch_size: int | None = None,
             batch_size=batch_size or settings.BATCH_SIZE,
             progress_every_batches=progress_every_batches,
             filter_query=filter_query,
+            seen_order_ids=seen_order_ids,
         )
         result = {
             "mode": "classify_existing_raw",
@@ -85,6 +87,7 @@ def run_pipeline(input_path: Path | None, batch_size: int | None = None,
                 batch_size=batch_size or settings.BATCH_SIZE,
                 progress_every_batches=progress_every_batches,
                 filter_query={"run_id": decision["run_id"]},
+                seen_order_ids=seen_order_ids,
             )
 
     result["total_elapsed_seconds"] = round(time.time() - started_at, 3)

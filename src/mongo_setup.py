@@ -11,8 +11,14 @@ if str(PROJECT_ROOT) not in sys.path:
 from config import settings  # noqa: E402
 
 
-def get_client() -> MongoClient:
-    return MongoClient(settings.MONGO_URI, serverSelectionTimeoutMS=settings.MONGO_TIMEOUT_MS)
+def get_client(timeout_ms: int | None = None) -> MongoClient:
+    ms = timeout_ms if timeout_ms is not None else settings.MONGO_TIMEOUT_MS
+    return MongoClient(
+        settings.MONGO_URI,
+        serverSelectionTimeoutMS=ms,
+        connectTimeoutMS=ms,
+        socketTimeoutMS=ms,
+    )
 
 
 def ping(client: MongoClient) -> None:

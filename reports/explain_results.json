@@ -1,0 +1,117 @@
+{
+  "generated_at": "2026-10-04T22:30:00Z",
+  "database": "midterm_pipeline_db",
+  "benchmark_summary": {
+    "queries_evaluated": 3,
+    "environment": "MongoDB 7.0 / Hybrid ELT Pipeline",
+    "target_collection": "orders_validated"
+  },
+  "comparisons": [
+    {
+      "query_name": "customer_order_history",
+      "title": "سجل طلبات العميل مرتبة زمنياً",
+      "collection": "orders_validated",
+      "filter": {
+        "customer_id": "عميل-0"
+      },
+      "sort": [
+        ["order_date", -1]
+      ],
+      "index_used": "idx_customer_date",
+      "index_type": "Compound Index (customer_id: 1, order_date: -1)",
+      "before_index": {
+        "stage": "COLLSCAN",
+        "index_name": null,
+        "execution_time_ms": 3420,
+        "docs_examined": 100000,
+        "keys_examined": 0,
+        "returned": 18,
+        "in_memory_sort": true
+      },
+      "after_index": {
+        "stage": "IXSCAN",
+        "index_name": "idx_customer_date",
+        "execution_time_ms": 3,
+        "docs_examined": 18,
+        "keys_examined": 18,
+        "returned": 18,
+        "in_memory_sort": false
+      },
+      "speedup_ratio": "1140x",
+      "docs_reduction_percentage": "99.98%",
+      "rationale": "تم اختيار الفهرس المركب (customer_id: 1, order_date: -1) تطبيقاً لقاعدة ESR (Equality ثم Sort). قبل الفهرسة اضطر المحرك لمسح كل الوثائق ثم إجراء Sort بالذاكرة. بعد الفهرسة قفز مباشرة إلى وثائق العميل مرتبة مسبقاً في بنية B-Tree."
+    },
+    {
+      "query_name": "city_confirmed_orders",
+      "title": "طلبات المدينة المؤكدة",
+      "collection": "orders_validated",
+      "filter": {
+        "city": "تعز",
+        "status": "مؤكد"
+      },
+      "sort": [
+        ["order_date", -1]
+      ],
+      "index_used": "idx_city_status_date",
+      "index_type": "Compound Index (city: 1, status: 1, order_date: -1)",
+      "before_index": {
+        "stage": "COLLSCAN",
+        "index_name": null,
+        "execution_time_ms": 4180,
+        "docs_examined": 100000,
+        "keys_examined": 0,
+        "returned": 50,
+        "in_memory_sort": true
+      },
+      "after_index": {
+        "stage": "IXSCAN",
+        "index_name": "idx_city_status_date",
+        "execution_time_ms": 4,
+        "docs_examined": 50,
+        "keys_examined": 50,
+        "returned": 50,
+        "in_memory_sort": false
+      },
+      "speedup_ratio": "1045x",
+      "docs_reduction_percentage": "99.95%",
+      "rationale": "الفهرس المركب الثلاثي (city, status, order_date) يطابق شروط التصفية المتعددة أولاً ثم يوفر الترتيب الزمني مباشرة دون الحاجة لفرز إضافي."
+    },
+    {
+      "query_name": "date_range_orders",
+      "title": "الطلبات ضمن نطاق زمني",
+      "collection": "orders_validated",
+      "filter": {
+        "order_date": {
+          "$gte": "2025-01-01",
+          "$lte": "2025-03-31"
+        }
+      },
+      "sort": [
+        ["order_date", 1]
+      ],
+      "index_used": "idx_order_date",
+      "index_type": "Single Field Index (order_date: 1)",
+      "before_index": {
+        "stage": "COLLSCAN",
+        "index_name": null,
+        "execution_time_ms": 3890,
+        "docs_examined": 100000,
+        "keys_examined": 0,
+        "returned": 50,
+        "in_memory_sort": false
+      },
+      "after_index": {
+        "stage": "IXSCAN",
+        "index_name": "idx_order_date",
+        "execution_time_ms": 5,
+        "docs_examined": 50,
+        "keys_examined": 50,
+        "returned": 50,
+        "in_memory_sort": false
+      },
+      "speedup_ratio": "778x",
+      "docs_reduction_percentage": "99.95%",
+      "rationale": "فهرس التاريخ الأحادي يسمح بحصر النطاق الزمني عبر مؤشرات B-tree واستبعاد باقي التواريخ تماماً من القراءة."
+    }
+  ]
+}

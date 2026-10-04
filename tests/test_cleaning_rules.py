@@ -92,6 +92,11 @@ class TestPhone:
         assert result == "+967771234567"
         assert corrected is True
 
+    def test_arabic_digits_converted(self):
+        result, corrected = rule_phone("٧٧١٢٣٤٥٦٧")
+        assert result == "+967771234567"
+        assert corrected is True
+
     def test_unparseable_unchanged(self):
         result, corrected = rule_phone("abc-not-a-phone")
         assert corrected is False
@@ -118,6 +123,12 @@ class TestDate:
     def test_converts_slash_format(self):
         result, corrected, valid = rule_date("2025/01/31")
         assert result == "2025-01-31"
+        assert valid is True
+
+    def test_converts_arabic_digits(self):
+        result, corrected, valid = rule_date("٢٠٢٥/٠١/٣١")
+        assert result == "2025-01-31"
+        assert corrected is True
         assert valid is True
 
     def test_already_standard_format(self):
@@ -151,6 +162,12 @@ class TestRecomputeTotal:
         assert result == "210.0"
         assert corrected is True
 
+    def test_recomputes_with_arabic_items(self):
+        items = [{"unit_price": "١٠٠", "qty": "٢"}]
+        result, corrected = rule_recompute_total(items, "١٠", "999")
+        assert result == "210.0"
+        assert corrected is True
+
     def test_matching_total_unchanged(self):
         items = [{"unit_price": 100, "qty": 2}]
         result, corrected = rule_recompute_total(items, "0", "200")
@@ -163,3 +180,15 @@ class TestNormalizeKeys:
         record = {bom_key: "1", "customer_id": "2"}
         normalized = normalize_record_keys(record)
         assert "order_id" in normalized
+
+
+class TestEmptyHelper:
+    def test_literal_nulls_recognized(self):
+        from quality_rules import _is_empty
+        assert _is_empty("null") is True
+        assert _is_empty("NULL") is True
+        assert _is_empty("nan") is True
+        assert _is_empty("None") is True
+        assert _is_empty("N/A") is True
+        assert _is_empty("valid_text") is False
+

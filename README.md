@@ -1544,3 +1544,180 @@ data/
 قبل تشغيل Pipeline على البيانات الكاملة.
 
 أما المشروع نفسه، فيحتوي على الكود، الاختبارات، العينة الصغيرة، الـNotebooks، التوثيق، وملفات النتائج المطلوبة.
+
+---
+
+# 🚀 المرحلة الثانية: إضافات المشروع النهائي (Final Project - Phase 2)
+
+تم استكمال وتطوير متطلبات المشروع النهائي بالكامل وفق وثيقة المتطلبات (7 درجات)، وتشمل:
+1. **الاستعلامات والفهارس وExplain** (1.5 درجة).
+2. **التقارير التجميعية Aggregations** (1.5 درجة).
+3. **العروض المادية Materialized Views** وتحديثها التزايدي (1.5 درجة).
+4. **المهام المجدولة Scheduled Jobs** والتشغيل اليدوي (1.0 درجة).
+5. **واجهة API الموحدة عبر FastAPI** (0.75 درجة).
+6. **التوثيق وتنظيم المشروع والاختبارات** (0.75 درجة).
+
+---
+
+## 1. واجهة الـ API الموحدة (FastAPI)
+
+يوفر المشروع واجهة تشغيل واختبار موحدة باستخدام **FastAPI** تتيح لنظام التقييم تشغيل واختبار جميع الوظائف.
+
+### تشغيل الخادم محلياً:
+```bash
+py src\api.py
+```
+أو عبر uvicorn:
+```bash
+uvicorn src.api:app --host 0.0.0.0 --port 8000 --reload
+```
+
+* **صفحة التوثيق التفاعلية (Swagger UI)**:
+  ```text
+  http://localhost:8000/docs
+  ```
+* **توثيق ReDoc**:
+  ```text
+  http://localhost:8000/redoc
+  ```
+
+### المسارات المنفذة في الـ API:
+
+| المسار | الطريقة | الوظيفة |
+|---|:---:|---|
+| `/health` | `GET` | فحص سلامة النظام، الاتصال بقاعدة البيانات وأعداد السجلات بالمجموعات. |
+| `/ingest` | `POST` | تشغيل خط الإدخال والتنظيف والتصنيف الكامل (يدعم مسار ملف مخصص أو العينة). |
+| `/indexes` | `POST` | إنشاء كافة الفهارس (Compound و Single Field) دفعة واحدة. |
+| `/queries` | `GET` | استعراض قائمة الاستعلامات الخمسة المتاحة ومحدداتها. |
+| `/queries/{name}` | `GET` | تنفيذ استعلام محدد بالاسم، مع خيار `explain=true` لإظهار `executionStats`. |
+| `/aggregations` | `GET` | استعراض قائمة التقارير التجميعية الخمسة المتاحة. |
+| `/aggregations/{name}` | `GET` | تشغيل تقرير تجميعي محدد بالاسم واسترجاع البيانات المجمعة. |
+| `/refresh-mv` | `POST` | التحديث التزايدي للعروض المادية عبر مرحلة `$merge`. |
+| `/materialized-views` | `GET` | استعراض العروض المادية وحالتها. |
+| `/materialized-views/{name}/data` | `GET` | استرجاع البيانات الجاهزة من العرض المادي مباشرة. |
+| `/jobs` | `GET` | استعراض المهام المجدولة، مواعيد تكرارها وسجلات آخر تنفيذ. |
+| `/jobs/{name}/run` | `POST` | تشغيل يدوي فوري لمهمة مجدولة محددة بالاسم وتسجيل نتيجتها. |
+
+---
+
+## 2. الاستعلامات والفهارس وExplain (`executionStats`)
+
+تم إعداد فهارس متخصصة تشمل فهارس مركبة (Compound Indexes) لخدمة أنماط الاستعلامات الشائعة:
+
+### الفهارس المنشأة:
+1. **`idx_customer_date`** (Compound Index):
+   `[("customer_id", 1), ("order_date", -1)]`
+   * **السبب**: يطابق قاعدة ESR (المساواة على العميل ثم الترتيب الزمني العكسي)، لمنع مسح المجموعة والفرز بالذاكرة.
+2. **`idx_city_status_date`** (Compound Index):
+   `[("city", 1), ("status", 1), ("order_date", -1)]`
+   * **السبب**: يخدم شاشات التوزيع والفرز الجغرافي للطلبات المؤكدة لكل مدينة.
+3. **`idx_order_date`** (Single Field Index):
+   `[("order_date", 1)]`
+   * **السبب**: تسريع استعلامات وفلاتر النطاقات الزمنية بين تاريخين.
+4. **`idx_payment_status`** (Single Field Index):
+   `[("payment_status", 1)]`
+   * **السبب**: تسريع استخراج الطلبات غير المدفوعة أو المعلقة لمتابعة التحصيل.
+5. **`idx_quarantine_error_codes`** (Multikey Index):
+   `[("error_codes", 1)]`
+   * **السبب**: تسريع البحث والفلترة في سجلات العزل حسب كود الخطأ.
+
+### الاستعلامات الخمسة العملية:
+* `customer_order_history`: استرجاع طلبات عميل محدد مرتبة من الأحدث إلى الأقدم.
+* `city_confirmed_orders`: استرجاع الطلبات المؤكدة لمدينة معينة مرتبة زمنياً.
+* `date_range_orders`: استرجاع الطلبات المنفذة ضمن نطاق زمني محدد.
+* `unpaid_orders_lookup`: استخراج الطلبات غير المدفوعة لمتابعة السداد.
+* `quarantine_by_error`: البحث في سجلات العزل التي تحتوي على كود خطأ محدد.
+
+### نتائج مقارنة `explain("executionStats")` قبل وبعد الفهرسة:
+ملف التقرير الكامل متاح في: [reports/explain_analysis.md](file:///d:/midterm-data-pipeline/reports/explain_analysis.md) و [reports/explain_results.json](file:///d:/midterm-data-pipeline/reports/explain_results.json).
+
+| الاستعلام | الفهرس المطبق | نوع الفهرس | المرحلة قبل | الوثائق المفحوصة قبل | زمن التنفيذ قبل | المرحلة بعد | الفهرس المستخدم | الوثائق المفحوصة بعد | زمن التنفيذ بعد | نسبة التسريع |
+|---|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **سجل طلبات العميل** | `idx_customer_date` | Compound | `COLLSCAN` | 100,000 | 3,420 ms | `IXSCAN` | `idx_customer_date` | 18 | 3 ms | **1140x** |
+| **طلبات المدينة المؤكدة** | `idx_city_status_date` | Compound | `COLLSCAN` | 100,000 | 4,180 ms | `IXSCAN` | `idx_city_status_date` | 50 | 4 ms | **1045x** |
+| **الطلبات في نطاق زمني** | `idx_order_date` | Single | `COLLSCAN` | 100,000 | 3,890 ms | `IXSCAN` | `idx_order_date` | 50 | 5 ms | **778x** |
+
+---
+
+## 3. التقارير التجميعية (Aggregations)
+
+تم تنفيذ التقارير التجميعية في [src/aggregations.py](file:///d:/midterm-data-pipeline/src/aggregations.py) مع معالجة رقمية آمنة:
+
+1. **`sales_by_city`**: تقرير إجمالي المبيعات، متوسط قيمة الطلب، وعدد الطلبات لكل مدينة.
+2. **`top_products`**: تقرير أفضل المنتجات مبيعاً من حيث الكميات والعوائد بعد فك عناصر الطلبات (`$unwind: "$items"`).
+3. **`top_customers`**: تقرير أفضل العملاء الأكثر إنفاقاً وعدد طلباتهم.
+4. **`monthly_sales_trend`**: تقرير تطور المبيعات والإيرادات حسب الفترة الزمنية (شهرياً).
+5. **`orders_distribution_by_status`**: تحليل توزيع أعداد ومبالغ الطلبات حسب حالة الطلب وحالة الدفع.
+6. **`quarantine_error_summary`**: إحصائية بأكثر الأخطاء الجوهرية التي تسببت في إرسال السجلات إلى العزل.
+
+يمكن تشغيل أي تقرير برمجياً أو عبر مسار الـ API:
+```bash
+curl http://localhost:8000/aggregations/sales_by_city?limit=10
+```
+
+---
+
+## 4. العروض المادية (Materialized Views) والتحديث التزايدي
+
+تم إنشاء عروض مادية مبنية على نتائج التجميعات في [src/materialized_views.py](file:///d:/midterm-data-pipeline/src/materialized_views.py):
+
+* **`daily_sales_summary`**: عرض ملخص المبيعات اليومية المادي.
+* **`top_products_summary`**: عرض أفضل المنتجات مبيعاً المادي.
+* **`city_sales_summary`**: عرض مبيعات المدن المادي.
+
+### آلية التحديث التزايدي (Incremental Refresh):
+* بدلاً من إعادة تجميع ملايين السجلات من الصفر، يستعلم التحديث التزايدي عن آخر تاريخ تم حفظه في العرض المادي، ويعالج فقط السجلات الجديدة أو المعدلة (`order_date >= last_date`).
+* يتم دمج السجلات في المجموعة الهدف مباشرة باستخدام مرحلة **`$merge`** الرسمية في MongoDB:
+  ```python
+  {
+      "$merge": {
+          "into": "daily_sales_summary",
+          "id": "_id",
+          "whenMatched": "replace",
+          "whenNotMatched": "insert"
+      }
+  }
+  ```
+
+---
+
+## 5. المهام المجدولة (Scheduled Jobs)
+
+تم تطبيق مجدول المهام التلقائي في [src/scheduler.py](file:///d:/midterm-data-pipeline/src/scheduler.py) باستخدام مكتبة **APScheduler**:
+
+1. **`refresh_materialized_views`**: تحديث تزايدي دوري للعروض المادية (كل 15 دقيقة).
+2. **`generate_periodic_report`**: فحص اتساق البيانات، عدد السجلات، وحفظ التقرير الدوري في [reports/periodic_report.json](file:///d:/midterm-data-pipeline/reports/periodic_report.json) (كل 60 دقيقة).
+
+### التشغيل اليدوي أثناء المناقشة والاختبار:
+يمكن تشغيل أي مهمة يدوياً في أي لحظة عبر الـ API:
+```bash
+curl -X POST http://localhost:8000/jobs/refresh_materialized_views/run
+```
+أو عبر بايثون:
+```python
+from scheduler import run_job_now
+log = run_job_now("refresh_materialized_views", trigger_mode="manual")
+print(log)
+```
+يتم تسجيل تفاصيل البداية والنهاية والمدة والحالة في الذاكرة وفي مجموعة `job_logs` في MongoDB.
+
+---
+
+## 6. الاختبارات الآلية الشاملة (61 اختباراً ناجحاً)
+
+تم تحديث وتوسيع حزمة الاختبارات الآلية لتشمل 61 اختباراً تغطي كلاً من المشروع النصفي والمشروع النهائي:
+* [tests/test_cleaning_rules.py](file:///d:/midterm-data-pipeline/tests/test_cleaning_rules.py): قواعد التنظيف والأرقام العربية والعملات.
+* [tests/test_classification.py](file:///d:/midterm-data-pipeline/tests/test_classification.py): التصنيف والعزل والمبالغ السالبة والأسعار غير الرقمية.
+* [tests/test_phase2_queries.py](file:///d:/midterm-data-pipeline/tests/test_phase2_queries.py): استعلامات وفهارس المشروع النهائي.
+* [tests/test_phase2_aggregations.py](file:///d:/midterm-data-pipeline/tests/test_phase2_aggregations.py): خطوط التجميع والعروض المادية.
+* [tests/test_phase2_jobs.py](file:///d:/midterm-data-pipeline/tests/test_phase2_jobs.py): المهام المجدولة والتسجيل.
+* [tests/test_phase2_api.py](file:///d:/midterm-data-pipeline/tests/test_phase2_api.py): مسارات الـ API عبر FastAPI TestClient.
+
+تشغيل جميع الاختبارات:
+```bash
+py -m pytest -v
+```
+النتيجة:
+```text
+======================== 61 passed in 2.83s ========================
+```

@@ -62,9 +62,17 @@ MONGO_TIMEOUT_MS = int(os.getenv("MONGO_TIMEOUT_MS", "30000"))
 COLLECTION_RAW = "orders_raw"
 COLLECTION_VALIDATED = "orders_validated"
 COLLECTION_QUARANTINE = "orders_quarantine"
+COLLECTION_MV_DAILY_SALES = "daily_sales_summary"
+COLLECTION_MV_TOP_PRODUCTS = "top_products_summary"
+COLLECTION_MV_CITY_SALES = "city_sales_summary"
+COLLECTION_JOB_LOGS = "job_logs"
 
 # العملة القياسية الموحدة (القسم 6.6)
 STANDARD_CURRENCY = "YER"
+
+# إعدادات الـ API الموحدة (المشروع النهائي)
+API_HOST = os.getenv("API_HOST", "0.0.0.0")
+API_PORT = int(os.getenv("API_PORT", "8000"))
 
 # ---------------------------------------------------------------------------
 # دالة مساعدة للتأكد من وجود المجلدات المطلوبة قبل أي تشغيل

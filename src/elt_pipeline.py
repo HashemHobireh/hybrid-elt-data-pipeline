@@ -79,7 +79,7 @@ def _build_quarantine_doc(
     }
 
 
-def run_full_classification(batch_size=5000, progress_every_batches=20, filter_query=None):
+def run_full_classification(batch_size=5000, progress_every_batches=20, filter_query=None, seen_order_ids=None):
     """تصنيف Raw كاملًا أو حسب filter_query مع كتابة نهائية قابلة لإعادة التشغيل."""
     client = MongoClient(settings.MONGO_URI, serverSelectionTimeoutMS=settings.MONGO_TIMEOUT_MS)
     db = client[settings.MONGO_DB_NAME]
@@ -93,7 +93,7 @@ def run_full_classification(batch_size=5000, progress_every_batches=20, filter_q
         create_indexes(db)
         total_raw = raw_collection.count_documents(filter_query)
         print(f"إجمالي السجلات المستهدفة للتصنيف: {total_raw:,}")
-        seen_order_ids = set()
+        seen_order_ids = set() if seen_order_ids is None else seen_order_ids
         counters = {"valid": 0, "corrected": 0, "quarantined": 0}
         quarantine_code_counts = {}
         correction_rule_counts = {}
