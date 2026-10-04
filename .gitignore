@@ -9,3 +9,5 @@ reports/screenshots/*.jpg
 data/orders_huge_mixed_quality.csv
 
 .ipynb_checkpoints/
+
+متطلبات المشروع النهائي.md
