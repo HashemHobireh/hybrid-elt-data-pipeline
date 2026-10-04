@@ -40,19 +40,21 @@ def classify_chunks(run_id: str, start_row: int, end_row: int, chunk_size: int,
         for item in progress if item.get("status") == "completed"
     }
     total_chunks = (end_row - start_row + chunk_size - 1) // chunk_size
+    seen_order_ids = set()
 
     for index, chunk_start in enumerate(range(start_row, end_row, chunk_size), start=1):
         chunk_end = min(chunk_start + chunk_size, end_row)
+        chunk_num = ((chunk_start - 1) // chunk_size) + 1
         key = (chunk_start, chunk_end)
         if key in completed:
-            print(f"[تخطي] الجزء {index}/{total_chunks}: {chunk_start} إلى {chunk_end - 1}")
+            print(f"[تخطي] الجزء {chunk_num}/{total_chunks}: {chunk_start} إلى {chunk_end - 1}")
             continue
 
-        print(f"\n===== الجزء {index}/{total_chunks}: الصفوف {chunk_start} إلى {chunk_end - 1} =====")
+        print(f"\n===== الجزء {chunk_num}/{total_chunks}: الصفوف {chunk_start} إلى {chunk_end - 1} =====")
         started_at = time.time()
         entry = {
             "run_id": run_id,
-            "chunk_number": index,
+            "chunk_number": chunk_num,
             "start_row": chunk_start,
             "end_row": chunk_end,
             "status": "running",
@@ -73,6 +75,7 @@ def classify_chunks(run_id: str, start_row: int, end_row: int, chunk_size: int,
                 progress_every_batches=progress_every_batches,
                 start_row=chunk_start,
                 end_row=chunk_end,
+                seen_order_ids=seen_order_ids,
             )
             entry.update({
                 "status": "completed",

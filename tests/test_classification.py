@@ -77,3 +77,29 @@ def test_duplicate_business_key_is_quarantined():
     assert first["quality_status"] == "valid"
     assert second["quality_status"] == "quarantined"
     assert "DUPLICATE_ORDER_ID" in second["quarantine_codes"]
+
+
+def test_negative_payment_is_quarantined():
+    result = classify_and_clean(record(payment_amount="-5000"), set())
+    assert result["quality_status"] == "quarantined"
+    assert "AMBIGUOUS_NEGATIVE_VALUE" in result["quarantine_codes"]
+
+
+def test_garbage_payment_is_quarantined_unknown_price():
+    result = classify_and_clean(record(payment_amount="xyz"), set())
+    assert result["quality_status"] == "quarantined"
+    assert "UNKNOWN_PRICE" in result["quarantine_codes"]
+
+
+def test_arabic_date_is_accepted_without_quarantine():
+    result = classify_and_clean(record(order_date="٢٠٢٥/٠١/٣١"), set())
+    assert result["quality_status"] in ("valid", "corrected")
+    assert result["cleaned_fields"]["order_date"] == "2025-01-31"
+    assert "INVALID_IMPOSSIBLE_DATE" not in result["quarantine_codes"]
+
+
+def test_literal_null_customer_id_is_quarantined():
+    result = classify_and_clean(record(customer_id="NULL"), set())
+    assert result["quality_status"] == "quarantined"
+    assert "MISSING_CUSTOMER_ID" in result["quarantine_codes"]
+
